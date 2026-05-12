@@ -1,0 +1,20 @@
+{
+  "name": "@aqua60/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node --watch server.mjs",
+    "build": "node -e \"console.log('API build skipped')\"",
+    "start": "node server.mjs",
+    "typecheck": "node -e \"console.log('API typecheck skipped')\""
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "fastify": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

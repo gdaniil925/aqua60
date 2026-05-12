@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  DRIVER
+  OWNER
+  ADMIN
+}
+
+enum DeliveryType {
+  SCHEDULED
+  EXPRESS
+}
+
+enum DeliveryStatus {
+  PENDING
+  AWAITING_CONFIRMATION
+  CONFIRMED
+  ASSIGNED
+  IN_PROGRESS
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  telegramId          String               @unique
+  role                UserRole
+  firstName           String?
+  lastName            String?
+  phone               String?
+  isBlocked           Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  addresses           Address[]
+  customerSubscriptions Subscription[]
+  customerOrders      Order[]              @relation("CustomerOrders")
+  driverDeliveries    Delivery[]           @relation("DriverDeliveries")
+  paymentMethods      PaymentMethod[]
+}
+
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  city         String   @default("Минск")
+  district     String?
+  street       String
+  house        String
+  entrance     String?
+  floor        String?
+  apartment    String?
+  intercomCode String?
+  comment      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+  orders       Order[]
+}
+
+model PaymentMethod {
+  id               String   @id @default(cuid())
+  userId           String
+  token            String
+  maskedPan        String?
+  cardBrand        String?
+  isDefault        Boolean  @default(false)
+  recurringEnabled Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id                 String   @id @default(cuid())
+  customerId         String
+  monthlyBottleLimit Int
+  bottlesRemaining   Int
+  deliveryDays       String
+  timeSlot           String
+  isActive           Boolean  @default(true)
+  startedAt          DateTime
+  nextChargeAt       DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  customer           User     @relation(fields: [customerId], references: [id])
+  orders             Order[]
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  customerId        String
+  subscriptionId    String?
+  addressId         String
+  type              DeliveryType
+  status            DeliveryStatus @default(PENDING)
+  bottlesCount      Int
+  waterAmount       Decimal
+  serviceAmount     Decimal
+  penaltyAmount     Decimal       @default(0)
+  totalAmount       Decimal
+  customerComment   String?
+  scheduledFor      DateTime?
+  confirmedAt       DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  customer          User          @relation("CustomerOrders", fields: [customerId], references: [id])
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id])
+  address           Address       @relation(fields: [addressId], references: [id])
+  delivery          Delivery?
+  payments          Payment[]
+}
+
+model Delivery {
+  id                   String         @id @default(cuid())
+  orderId              String         @unique
+  driverId             String?
+  acceptedAt           DateTime?
+  startedAt            DateTime?
+  deadlineAt           DateTime?
+  deliveredAt          DateTime?
+  emptyBottlesReturned Int            @default(0)
+  driverLatitude       Float?
+  driverLongitude      Float?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  order                Order          @relation(fields: [orderId], references: [id])
+  driver               User?          @relation("DriverDeliveries", fields: [driverId], references: [id])
+}
+
+model Payment {
+  id                 String        @id @default(cuid())
+  orderId            String?
+  userId             String
+  provider           String        @default("bePaid")
+  externalId         String?
+  status             PaymentStatus @default(PENDING)
+  amount             Decimal
+  currency           String        @default("BYN")
+  reason             String
+  errorMessage       String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  order              Order?        @relation(fields: [orderId], references: [id])
+}
+
+model InventorySnapshot {
+  id                String   @id @default(cuid())
+  warehouseFull     Int
+  warehouseEmpty    Int      @default(0)
+  lowStockThreshold Int      @default(50)
+  createdAt         DateTime @default(now())
+}
