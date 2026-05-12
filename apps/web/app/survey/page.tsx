@@ -422,7 +422,7 @@ export default function SurveyPage() {
                       : "Соберите свой план"}
                   </h3>
                 </div>
-                <StatusPill>{subscriptionSaved ? "Подписка активна" : "MVP demo"}</StatusPill>
+                <StatusPill>{subscriptionSaved ? "Подписка активна" : "Новая настройка"}</StatusPill>
               </div>
               <div className="demo-tabstrip">
                 <button
@@ -479,10 +479,6 @@ export default function SurveyPage() {
                         >
                           Подтянуть номер из Telegram
                         </button>
-                        <p className="demo-muted compact-note">
-                          Кнопка нужна, чтобы клиент не вводил номер вручную, а
-                          сразу подставил контакт из Telegram.
-                        </p>
                       </div>
                     </div>
 
