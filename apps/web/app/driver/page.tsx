@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { AccessIdentity } from "../ui";
 import {
@@ -521,7 +521,7 @@ function DriverDashboard({ identity }: { identity: AccessIdentity }) {
   );
 }
 
-export default function DriverPage() {
+function DriverPageContent() {
   const searchParams = useSearchParams();
   const internalAccess = searchParams.get("bot") === "internal";
 
@@ -552,5 +552,13 @@ export default function DriverPage() {
     >
       {(identity) => <DriverDashboard identity={identity} />}
     </AccessGate>
+  );
+}
+
+export default function DriverPage() {
+  return (
+    <Suspense fallback={<p className="muted-text">Загружаем кабинет курьера...</p>}>
+      <DriverPageContent />
+    </Suspense>
   );
 }

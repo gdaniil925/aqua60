@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { AccessIdentity } from "../ui";
 import {
@@ -727,7 +727,7 @@ function OwnerDashboard({ identity }: { identity: AccessIdentity }) {
   );
 }
 
-export default function OwnerPage() {
+function OwnerPageContent() {
   const searchParams = useSearchParams();
   const internalAccess = searchParams.get("bot") === "internal";
 
@@ -758,5 +758,13 @@ export default function OwnerPage() {
     >
       {(identity) => <OwnerDashboard identity={identity} />}
     </AccessGate>
+  );
+}
+
+export default function OwnerPage() {
+  return (
+    <Suspense fallback={<p className="muted-text">Загружаем кабинет владельца...</p>}>
+      <OwnerPageContent />
+    </Suspense>
   );
 }
