@@ -238,6 +238,7 @@ export function AccessGate({
   const [value, setValue] = useState("");
   const [identity, setIdentity] = useState<AccessIdentity | null>(null);
   const [error, setError] = useState("");
+  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey(role));
@@ -245,10 +246,34 @@ export function AccessGate({
       return;
     }
 
-    const matched = ACCESS_MAP[role].find((entry) => entry.code === saved);
-    if (matched) {
-      setIdentity(matched);
-    }
+    void (async () => {
+      try {
+        setIsChecking(true);
+        const response = await fetch("/api/access", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ role, code: saved })
+        });
+
+        if (!response.ok) {
+          window.localStorage.removeItem(storageKey(role));
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          ok: boolean;
+          identity?: AccessIdentity;
+        };
+
+        if (payload.ok && payload.identity) {
+          setIdentity(payload.identity);
+        }
+      } finally {
+        setIsChecking(false);
+      }
+    })();
   }, [role]);
 
   const demoCodes = useMemo(
@@ -258,20 +283,36 @@ export function AccessGate({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    void (async () => {
+      try {
+        setIsChecking(true);
+        const response = await fetch("/api/access", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ role, code: value })
+        });
 
-    const matched = ACCESS_MAP[role].find(
-      (entry) => entry.code.toLowerCase() === value.trim().toLowerCase()
-    );
+        const payload = (await response.json()) as {
+          ok: boolean;
+          message?: string;
+          identity?: AccessIdentity;
+        };
 
-    if (!matched) {
-      setError("Код не найден. Проверь ID или код доступа.");
-      return;
-    }
+        if (!response.ok || !payload.ok || !payload.identity) {
+          setError(payload.message ?? "Код не найден. Проверь ID или код доступа.");
+          return;
+        }
 
-    window.localStorage.setItem(storageKey(role), matched.code);
-    setIdentity(matched);
-    setValue("");
-    setError("");
+        window.localStorage.setItem(storageKey(role), payload.identity.code);
+        setIdentity(payload.identity);
+        setValue("");
+        setError("");
+      } finally {
+        setIsChecking(false);
+      }
+    })();
   };
 
   const resetAccess = () => {
@@ -300,12 +341,13 @@ export function AccessGate({
             <input
               id="access-code"
               className="field-input"
+              disabled={isChecking}
               onChange={(event) => setValue(event.target.value)}
               placeholder="Например, DR-1001"
               value={value}
             />
-            <button className="primary-button" type="submit">
-              Открыть раздел
+            <button className="primary-button" disabled={isChecking} type="submit">
+              {isChecking ? "Проверяем доступ..." : "Открыть раздел"}
             </button>
           </form>
 
@@ -333,4 +375,3 @@ export function AccessGate({
     </AppShell>
   );
 }
-

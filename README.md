@@ -42,11 +42,23 @@
 
 ## Telegram Mini App Demo
 
-Чтобы открыть demo-экран из Telegram-бота:
+Проект поддерживает два отдельных Telegram-бота:
 
-1. Укажи `TELEGRAM_BOT_TOKEN`.
-2. Укажи публичный `WEBAPP_URL`.
-3. Запусти `apps/api`.
-4. Напиши боту `/start`.
+1. `customer bot`
+   Открывает только клиентский экран:
+   - `/survey`
+   - webhook: `/api/telegram/customer`
 
-Бот пришлет кнопку `Открыть Aqua60`, которая откроет demo как Telegram Web App.
+2. `internal bot`
+   Открывает только внутренние кабинеты:
+   - `/owner?bot=internal`
+   - `/driver?bot=internal`
+   - webhook: `/api/telegram/internal`
+
+Нужные переменные окружения:
+
+- `CUSTOMER_TELEGRAM_BOT_TOKEN`
+- `CUSTOMER_TELEGRAM_WEBAPP_URL`
+- `INTERNAL_TELEGRAM_BOT_TOKEN`
+- `INTERNAL_OWNER_WEBAPP_URL`
+- `INTERNAL_DRIVER_WEBAPP_URL`
