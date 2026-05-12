@@ -9,7 +9,11 @@ const plans = [
   { id: "40", bottles: 40, note: "Для семьи или офиса" }
 ];
 
-const timeSlots = ["10:00 - 12:00", "14:00 - 16:00", "19:00 - 21:00"];
+const timeSlots = Array.from({ length: 24 }, (_, index) => {
+  const start = String(index).padStart(2, "0");
+  const end = String((index + 1) % 24).padStart(2, "0");
+  return `${start}:00 - ${end}:00`;
+});
 const weekdays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const waterPrice = 2.99;
 const firstServicePrice = 2.99;
@@ -147,6 +151,9 @@ function distributeBottles(monthlyBottles: number, tripCount: number) {
 }
 
 export default function SurveyPage() {
+  const [activeTab, setActiveTab] = useState<"profile" | "subscription" | "delivery">(
+    "profile"
+  );
   const [phone, setPhone] = useState("");
   const [street, setStreet] = useState(initialStreet.label);
   const [house, setHouse] = useState(initialStreet.houses[0]);
@@ -160,7 +167,7 @@ export default function SurveyPage() {
 
   const [selectedPlan, setSelectedPlan] = useState("20");
   const [selectedDays, setSelectedDays] = useState<string[]>(["Пн", "Чт"]);
-  const [selectedSlot, setSelectedSlot] = useState("19:00 - 21:00");
+  const [selectedSlot, setSelectedSlot] = useState("19:00 - 20:00");
 
   const [paymentLinked, setPaymentLinked] = useState(false);
   const [subscriptionSaved, setSubscriptionSaved] = useState(false);
@@ -344,6 +351,7 @@ export default function SurveyPage() {
     setPaymentLinked(true);
     setSubscriptionSaved(true);
     setScheduleEditingEnabled(false);
+    setActiveTab("delivery");
   };
 
   const handleExpressRequest = () => {
@@ -388,9 +396,14 @@ export default function SurveyPage() {
 
           <div className="demo-screen">
             <div className="demo-hero">
-              <div className="demo-badges">
-                <StatusPill>Минск</StatusPill>
-                <StatusPill>5л вода</StatusPill>
+              <div className="demo-hero-topline">
+                <div className="demo-badges">
+                  <StatusPill>Минск</StatusPill>
+                  <StatusPill>5л вода</StatusPill>
+                </div>
+                <div className="demo-brand-mark" aria-hidden="true">
+                  <span>A60</span>
+                </div>
               </div>
               <h1 className="demo-title">Подписка на воду в один экран</h1>
               <p className="demo-copy">
@@ -399,528 +412,604 @@ export default function SurveyPage() {
               </p>
             </div>
 
-            <div className="demo-card">
-              <div className="demo-section-head">
+            <div className="demo-card sticky-summary">
+              <div className="demo-card-head">
                 <div>
-                  <p className="demo-kicker">Шаг 2</p>
-                  <h3 className="demo-section-title">Профиль клиента</h3>
+                  <p className="demo-kicker">Личный кабинет</p>
+                  <h3 className="demo-card-title">
+                    {subscriptionSaved
+                      ? `Осталось ${plan.bottles - nextDeliveryBottles} бутылей`
+                      : "Соберите свой план"}
+                  </h3>
                 </div>
-                <StatusPill>{profileReady ? "Готов" : "Заполните анкету"}</StatusPill>
+                <StatusPill>{subscriptionSaved ? "Подписка активна" : "MVP demo"}</StatusPill>
               </div>
-
-              <div className="profile-grid">
-                <div className="contact-share-card">
-                  <label className="field-label">
-                    Телефон
-                    <input
-                      className="field-input"
-                      onChange={(event) => setPhone(event.target.value)}
-                      placeholder="+375 (__) ___-__-__"
-                      value={phone}
-                    />
-                  </label>
-                  <button
-                    className="demo-secondary-cta contact-share-button"
-                    onClick={handleShareContact}
-                    type="button"
-                  >
-                    Поделиться контактом
-                  </button>
-                </div>
-
-                <div className="bottle-card">
-                  <p className="demo-kicker">Выбор тары</p>
-                  <strong>Бутыль 5л</strong>
-                  <span className="demo-muted">
-                    На первом этапе доступна только одна фиксированная тара.
-                  </span>
-                </div>
+              <div className="demo-tabstrip">
+                <button
+                  className={`demo-tab${activeTab === "profile" ? " active" : ""}`}
+                  onClick={() => setActiveTab("profile")}
+                  type="button"
+                >
+                  Профиль
+                </button>
+                <button
+                  className={`demo-tab${activeTab === "subscription" ? " active" : ""}`}
+                  onClick={() => setActiveTab("subscription")}
+                  type="button"
+                >
+                  Подписка
+                </button>
+                <button
+                  className={`demo-tab${activeTab === "delivery" ? " active" : ""}`}
+                  onClick={() => setActiveTab("delivery")}
+                  type="button"
+                >
+                  Доставка
+                </button>
               </div>
             </div>
 
-            <div className="demo-section">
-              <div className="demo-section-head">
-                <div>
-                  <h3 className="demo-section-title">Адрес доставки</h3>
-                  <span className="demo-muted">
-                    Улица и дом выбираются из сценария Минск-Мир, остальные поля
-                    клиент вводит вручную.
-                  </span>
-                </div>
-                <StatusPill>{district}</StatusPill>
-              </div>
-
-              <div className="address-map-card">
-                <div className="real-address-map-shell">
-                  <iframe
-                    className="real-address-map-frame"
-                    key={`${selectedCoords.lat}-${selectedCoords.lon}`}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={mapSrc}
-                    title="Карта Минска"
-                  />
-                  <span className="map-floating-chip">Минск</span>
-                  {pickPointMode ? (
-                    <div className="map-pick-panel">
-                      <button
-                        className={`map-pick-toggle${tapToPickArmed ? " active" : ""}`}
-                        onClick={() => setTapToPickArmed((current) => !current)}
-                        type="button"
-                      >
-                        {tapToPickArmed ? "Коснитесь карты" : "Выбрать касанием"}
-                      </button>
-                      <button
-                        className="map-pick-cancel"
-                        onClick={() => {
-                          setPickPointMode(false);
-                          setTapToPickArmed(false);
-                        }}
-                        type="button"
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      className="map-pick-toggle"
-                      onClick={() => setPickPointMode(true)}
-                      type="button"
-                    >
-                      Поставить точку
-                    </button>
-                  )}
-                  {pickPointMode && !tapToPickArmed ? (
-                    <div className="map-pick-status">
-                      Сначала приблизьте карту, затем нажмите "Выбрать касанием"
-                    </div>
-                  ) : null}
-                  {tapToPickArmed ? (
-                    <div
-                      className="map-pick-overlay"
-                      onClick={handleMapPick}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      <span className="map-pick-hint">Коснитесь карты</span>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="address-form-card">
-                  <div className="address-fields-row">
-                    <label className="field-label">
-                      Улица
-                      <select
-                        className="field-input"
-                        onChange={(event) => handleStreetSelect(event.target.value)}
-                        value={street}
-                      >
-                        {streetCatalog.map((item) => (
-                          <option key={item.label} value={item.label}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="field-label">
-                      Дом
-                      <select
-                        className="field-input"
-                        onChange={(event) => setHouse(event.target.value)}
-                        value={house}
-                      >
-                        {availableHouses.map((item) => (
-                          <option key={item} value={item}>
-                            {item}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-
-                  <div className="address-fields-grid">
-                    <label className="field-label">
-                      Подъезд
-                      <input
-                        className="field-input"
-                        onChange={(event) => setEntrance(event.target.value)}
-                        value={entrance}
-                      />
-                    </label>
-                    <label className="field-label">
-                      Этаж
-                      <input
-                        className="field-input"
-                        onChange={(event) => setFloor(event.target.value)}
-                        value={floor}
-                      />
-                    </label>
-                    <label className="field-label">
-                      Квартира / офис
-                      <input
-                        className="field-input"
-                        onChange={(event) => setApartment(event.target.value)}
-                        value={apartment}
-                      />
-                    </label>
-                    <label className="field-label">
-                      Код домофона
-                      <input
-                        className="field-input"
-                        onChange={(event) => setIntercom(event.target.value)}
-                        value={intercom}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="address-selection">
-                    <strong>{selectedAddress}</strong>
-                    <span>
-                      {district} • код домофона {intercom || "не указан"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="demo-section">
-              <div className="demo-section-head">
-                <div>
-                  <h3 className="demo-section-title">Конструктор подписки</h3>
-                  <span className="demo-muted">
-                    Выберите месячный объем, дни доставки и временной слот.
-                  </span>
-                </div>
-                <StatusPill>{plan.bottles} бутылей</StatusPill>
-              </div>
-
-              <div className="plan-grid">
-                {plans.map((item) => (
-                  <button
-                    key={item.id}
-                    className={`plan-card${selectedPlan === item.id ? " active" : ""}`}
-                    onClick={() => setSelectedPlan(item.id)}
-                    type="button"
-                  >
-                    <strong>{item.bottles} бутылей</strong>
-                    <span>{item.note}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="day-grid">
-                {weekdays.map((day) => (
-                  <button
-                    key={day}
-                    className={`day-pill${selectedDays.includes(day) ? " active" : ""}`}
-                    disabled={!canEditSchedule}
-                    onClick={() => handleToggleDay(day)}
-                    type="button"
-                  >
-                    {day}
-                  </button>
-                ))}
-              </div>
-
-              <div className="slot-list">
-                {timeSlots.map((slot) => (
-                  <button
-                    key={slot}
-                    className={`slot-card${selectedSlot === slot ? " active" : ""}`}
-                    disabled={!canEditSchedule}
-                    onClick={() => setSelectedSlot(slot)}
-                    type="button"
-                  >
-                    <span>{slot}</span>
-                    {selectedSlot === slot ? <strong>Выбрано</strong> : null}
-                  </button>
-                ))}
-              </div>
-
-              <div className="calculator-card">
-                <div className="demo-section-head">
-                  <div>
-                    <p className="demo-kicker">Калькулятор стоимости</p>
-                    <h3 className="demo-section-title">Авторасчет на месяц</h3>
-                  </div>
-                  <StatusPill>{formatMoney(monthlyPrice)}</StatusPill>
-                </div>
-
-                <div className="formula-note">
-                  Выезд 1: (2.99 вода + 2.99 сервис) + остальные бутыли в этом
-                  заказе × (2.99 вода + 1.99 сервис)
-                </div>
-
-                <div className="calculator-lines">
-                  {tripDistribution.map((bottlesInTrip, index) => (
-                    <div key={`${bottlesInTrip}-${index}`} className="calculator-line">
-                      <span>
-                        Выезд {index + 1} • {bottlesInTrip} бут.
-                      </span>
-                      <strong>{formatMoney(getTripCost(bottlesInTrip))}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="demo-summary">
-              <div>
-                <p className="demo-kicker">Ваш план</p>
-                <h3 className="demo-summary-title">
-                  {plan.bottles} бутылей • {selectedDays.join(" / ")} •{" "}
-                  {selectedSlot}
-                </h3>
-                <p className="demo-summary-address">{selectedAddress}</p>
-              </div>
-              <div className="demo-price">
-                <span>к оплате</span>
-                <strong>{formatMoney(monthlyPrice)}</strong>
-              </div>
-            </div>
-
-            <div className="demo-cta-stack">
-              <button
-                className="demo-main-cta"
-                disabled={!canSubmitSubscription}
-                onClick={handleSubscriptionSave}
-                type="button"
-              >
-                {subscriptionSaved
-                  ? "Карта привязана, подписка активна"
-                  : "Оформить подписку и привязать карту"}
-              </button>
-            </div>
-
-            {subscriptionSaved ? (
+            {activeTab === "profile" ? (
               <>
-                <div className="cabinet-grid">
-                  <div className="demo-card primary">
-                    <p className="demo-kicker">Личный кабинет</p>
-                    <h3 className="demo-card-title">
-                      Осталось {plan.bottles - nextDeliveryBottles} бутылей до конца месяца
-                    </h3>
-                    <p className="demo-muted">
-                      Ближайшая доставка: завтра, {selectedSlot}. Курьер привезет{" "}
-                      {nextDeliveryBottles} бутыли.
-                    </p>
+                <div className="demo-card">
+                  <div className="demo-section-head">
+                    <div>
+                      <p className="demo-kicker">Шаг 2</p>
+                      <h3 className="demo-section-title">Профиль клиента</h3>
+                    </div>
+                    <StatusPill>{profileReady ? "Готов" : "Заполните анкету"}</StatusPill>
                   </div>
 
-                  <div className="demo-card">
-                    <p className="demo-kicker">Оплата</p>
-                    <h3 className="demo-card-title">Карта bePaid привязана</h3>
-                    <p className="demo-muted">
-                      Следующее автосписание: 1 июня • {formatMoney(monthlyPrice)}
-                    </p>
+                  <div className="profile-grid">
+                    <div className="contact-share-card">
+                      <label className="field-label">
+                        Телефон
+                        <input
+                          className="field-input"
+                          onChange={(event) => setPhone(event.target.value)}
+                          placeholder="+375 (__) ___-__-__"
+                          value={phone}
+                        />
+                      </label>
+                      <div className="contact-action-stack">
+                        <button
+                          className="demo-secondary-cta contact-share-button"
+                          onClick={handleShareContact}
+                          type="button"
+                        >
+                          Подтянуть номер из Telegram
+                        </button>
+                        <p className="demo-muted compact-note">
+                          Кнопка нужна, чтобы клиент не вводил номер вручную, а
+                          сразу подставил контакт из Telegram.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bottle-card">
+                      <p className="demo-kicker">Выбор тары</p>
+                      <strong>Бутыль 5л</strong>
+                      <span className="demo-muted">
+                        На первом этапе доступна только одна фиксированная тара.
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="demo-card">
-                  <div className="demo-card-head">
+                <div className="demo-section">
+                  <div className="demo-section-head">
                     <div>
-                      <p className="demo-kicker">Управление графиком</p>
-                      <h3 className="demo-card-title">Изменение дней и времени</h3>
+                      <h3 className="demo-section-title">Адрес доставки</h3>
+                      <span className="demo-muted">
+                        Улица и дом выбираются из сценария Минск-Мир, остальные поля
+                        клиент вводит вручную.
+                      </span>
                     </div>
-                    <StatusPill>
-                      {scheduleEditingEnabled ? "Редактирование открыто" : "1 BYN"}
-                    </StatusPill>
+                    <StatusPill>{district}</StatusPill>
                   </div>
-                  <p className="demo-muted">
-                    После оформления подписки график можно менять только после
-                    подтверждения списания 1 BYN.
-                  </p>
-                  <div className="action-row">
-                    <button
-                      className="demo-secondary-cta compact-button"
-                      onClick={() => setScheduleChangeOpen(true)}
-                      type="button"
-                    >
-                      Изменить дни / время доставки
-                    </button>
+
+                  <div className="address-map-card">
+                    <div className="real-address-map-shell">
+                      <iframe
+                        className="real-address-map-frame"
+                        key={`${selectedCoords.lat}-${selectedCoords.lon}`}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={mapSrc}
+                        title="Карта Минска"
+                      />
+                      <span className="map-floating-chip">Минск</span>
+                      {pickPointMode ? (
+                        <div className="map-pick-panel">
+                          <button
+                            className={`map-pick-toggle${tapToPickArmed ? " active" : ""}`}
+                            onClick={() => setTapToPickArmed((current) => !current)}
+                            type="button"
+                          >
+                            {tapToPickArmed ? "Коснитесь карты" : "Выбрать касанием"}
+                          </button>
+                          <button
+                            className="map-pick-cancel"
+                            onClick={() => {
+                              setPickPointMode(false);
+                              setTapToPickArmed(false);
+                            }}
+                            type="button"
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          className="map-pick-toggle"
+                          onClick={() => setPickPointMode(true)}
+                          type="button"
+                        >
+                          Поставить точку
+                        </button>
+                      )}
+                      {pickPointMode && !tapToPickArmed ? (
+                        <div className="map-pick-status">
+                          Сначала приблизьте карту, затем нажмите "Выбрать касанием"
+                        </div>
+                      ) : null}
+                      {tapToPickArmed ? (
+                        <div
+                          className="map-pick-overlay"
+                          onClick={handleMapPick}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          <span className="map-pick-hint">Коснитесь карты</span>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="address-form-card">
+                      <div className="address-fields-row">
+                        <label className="field-label">
+                          Улица
+                          <select
+                            className="field-input"
+                            onChange={(event) => handleStreetSelect(event.target.value)}
+                            value={street}
+                          >
+                            {streetCatalog.map((item) => (
+                              <option key={item.label} value={item.label}>
+                                {item.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="field-label">
+                          Дом
+                          <select
+                            className="field-input"
+                            onChange={(event) => setHouse(event.target.value)}
+                            value={house}
+                          >
+                            {availableHouses.map((item) => (
+                              <option key={item} value={item}>
+                                {item}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div className="address-fields-grid">
+                        <label className="field-label">
+                          Подъезд
+                          <input
+                            className="field-input"
+                            onChange={(event) => setEntrance(event.target.value)}
+                            value={entrance}
+                          />
+                        </label>
+                        <label className="field-label">
+                          Этаж
+                          <input
+                            className="field-input"
+                            onChange={(event) => setFloor(event.target.value)}
+                            value={floor}
+                          />
+                        </label>
+                        <label className="field-label">
+                          Квартира / офис
+                          <input
+                            className="field-input"
+                            onChange={(event) => setApartment(event.target.value)}
+                            value={apartment}
+                          />
+                        </label>
+                        <label className="field-label">
+                          Код домофона
+                          <input
+                            className="field-input"
+                            onChange={(event) => setIntercom(event.target.value)}
+                            value={intercom}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="address-selection">
+                        <strong>{selectedAddress}</strong>
+                        <span>
+                          {district} • код домофона {intercom || "не указан"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </>
+            ) : null}
 
-                <div className="demo-card">
-                  <div className="demo-card-head">
+            {activeTab === "subscription" ? (
+              <>
+                <div className="demo-section">
+                  <div className="demo-section-head">
                     <div>
-                      <p className="demo-kicker">Push-уведомление</p>
-                      <h3 className="demo-card-title">
-                        Завтра по графику везем {nextDeliveryBottles} бут.
-                      </h3>
+                      <h3 className="demo-section-title">Конструктор подписки</h3>
+                      <span className="demo-muted">
+                        Выберите месячный объем, дни доставки и временной слот.
+                      </span>
                     </div>
-                    <StatusPill>
-                      {deliveryConfirmation === "pending"
-                        ? "Ждем ответ"
-                        : deliveryConfirmation === "confirmed"
-                          ? "Подтверждено"
-                          : "Перенесено"}
-                    </StatusPill>
-                  </div>
-                  <p className="demo-muted">
-                    Это демо-версия ежедневного подтверждения в боте. Если
-                    нажать «Да», заказ уходит курьеру. Если «Нет», лимит
-                    сохраняется, а доставка переносится.
-                  </p>
-                  <div className="action-row">
-                    <button
-                      className="demo-main-cta compact-button"
-                      onClick={() => setDeliveryConfirmation("confirmed")}
-                      type="button"
-                    >
-                      Да, подтверждаю
-                    </button>
-                    <button
-                      className="demo-secondary-cta compact-button"
-                      onClick={() => setDeliveryConfirmation("postponed")}
-                      type="button"
-                    >
-                      Нет, перенести
-                    </button>
-                  </div>
-                </div>
-
-                <div className="demo-card">
-                  <div className="demo-card-head">
-                    <div>
-                      <p className="demo-kicker">Дозаказать 24/7</p>
-                      <h3 className="demo-card-title">Экспресс вне лимита</h3>
-                    </div>
-                    <StatusPill>{formatMoney(expressPrice)}</StatusPill>
+                    <StatusPill>{plan.bottles} бутылей</StatusPill>
                   </div>
 
-                  <div className="express-quantity-row">
-                    {[1, 2, 3].map((count) => (
+                  <div className="plan-grid">
+                    {plans.map((item) => (
                       <button
-                        key={count}
-                        className={`day-pill${expressBottles === count ? " active" : ""}`}
-                        onClick={() => setExpressBottles(count)}
+                        key={item.id}
+                        className={`plan-card${selectedPlan === item.id ? " active" : ""}`}
+                        onClick={() => setSelectedPlan(item.id)}
                         type="button"
                       >
-                        {count} бут.
+                        <strong>{item.bottles} бутылей</strong>
+                        <span>{item.note}</span>
                       </button>
                     ))}
                   </div>
 
-                  {expressState === "idle" ? (
-                    <>
-                      <p className="demo-muted">
-                        Клиент оформляет экспресс отдельно от подписки. Таймер
-                        начнется только после подтверждения заказа курьером.
-                      </p>
+                  <div className="day-grid">
+                    {weekdays.map((day) => (
                       <button
-                        className="demo-main-cta compact-button"
-                        onClick={handleExpressRequest}
+                        key={day}
+                        className={`day-pill${selectedDays.includes(day) ? " active" : ""}`}
+                        disabled={!canEditSchedule}
+                        onClick={() => handleToggleDay(day)}
                         type="button"
                       >
-                        Дозаказать 24/7
+                        {day}
                       </button>
-                    </>
-                  ) : null}
+                    ))}
+                  </div>
 
-                  {expressState === "requested" ? (
-                    <div className="express-live">
-                      <div className="express-timer neutral">
-                        <span>Экспресс оформлен</span>
-                        <strong>Ждем курьера</strong>
+                  <div className="slot-list">
+                    {timeSlots.map((slot) => (
+                      <button
+                        key={slot}
+                        className={`slot-card${selectedSlot === slot ? " active" : ""}`}
+                        disabled={!canEditSchedule}
+                        onClick={() => setSelectedSlot(slot)}
+                        type="button"
+                      >
+                        <span>{slot}</span>
+                        {selectedSlot === slot ? <strong>Выбрано</strong> : null}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="calculator-card">
+                    <div className="demo-section-head">
+                      <div>
+                        <p className="demo-kicker">Калькулятор стоимости</p>
+                        <h3 className="demo-section-title">Авторасчет на месяц</h3>
                       </div>
-                      <p className="demo-muted">
-                        Таймер еще не идет. Он стартует только после кнопки
-                        подтверждения у курьера.
-                      </p>
-                      <div className="action-row">
-                        <button
-                          className="demo-main-cta compact-button"
-                          onClick={handleCourierConfirm}
-                          type="button"
-                        >
-                          Курьер подтвердил заказ
-                        </button>
+                      <StatusPill>{formatMoney(monthlyPrice)}</StatusPill>
+                    </div>
+
+                    <div className="formula-note">
+                      Выезд 1: (2.99 вода + 2.99 сервис) + остальные бутыли в этом
+                      заказе × (2.99 вода + 1.99 сервис)
+                    </div>
+
+                    <div className="calculator-lines">
+                      {tripDistribution.map((bottlesInTrip, index) => (
+                        <div key={`${bottlesInTrip}-${index}`} className="calculator-line">
+                          <span>
+                            Выезд {index + 1} • {bottlesInTrip} бут.
+                          </span>
+                          <strong>{formatMoney(getTripCost(bottlesInTrip))}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="demo-summary">
+                  <div>
+                    <p className="demo-kicker">Ваш план</p>
+                    <h3 className="demo-summary-title">
+                      {plan.bottles} бутылей • {selectedDays.join(" / ")} •{" "}
+                      {selectedSlot}
+                    </h3>
+                    <p className="demo-summary-address">{selectedAddress}</p>
+                  </div>
+                  <div className="demo-price">
+                    <span>к оплате</span>
+                    <strong>{formatMoney(monthlyPrice)}</strong>
+                  </div>
+                </div>
+
+                <div className="demo-cta-stack">
+                  <button
+                    className="demo-main-cta"
+                    disabled={!canSubmitSubscription}
+                    onClick={handleSubscriptionSave}
+                    type="button"
+                  >
+                    {subscriptionSaved
+                      ? "Карта привязана, подписка активна"
+                      : "Оформить подписку и привязать карту"}
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {activeTab === "delivery" ? (
+              <>
+                {!subscriptionSaved ? (
+                  <div className="demo-card empty-state-card">
+                    <div className="empty-state-icon">A60</div>
+                    <h3 className="demo-card-title">Сначала соберите подписку</h3>
+                    <p className="demo-muted">
+                      Здесь будет личный кабинет клиента: остаток бутылей,
+                      ближайшая доставка, push-подтверждение, экспресс и история.
+                    </p>
+                    <button
+                      className="demo-main-cta compact-button"
+                      onClick={() => setActiveTab("subscription")}
+                      type="button"
+                    >
+                      Перейти к настройке подписки
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="cabinet-grid">
+                      <div className="demo-card primary">
+                        <div className="card-logo-row">
+                          <div>
+                            <p className="demo-kicker">Личный кабинет</p>
+                            <h3 className="demo-card-title">
+                              Осталось {plan.bottles - nextDeliveryBottles} бутылей до конца месяца
+                            </h3>
+                          </div>
+                          <div className="cabinet-logo">A60</div>
+                        </div>
+                        <p className="demo-muted">
+                          Ближайшая доставка: завтра, {selectedSlot}. Курьер привезет{" "}
+                          {nextDeliveryBottles} бутыли.
+                        </p>
+                      </div>
+
+                      <div className="demo-card">
+                        <p className="demo-kicker">Оплата</p>
+                        <h3 className="demo-card-title">Карта bePaid привязана</h3>
+                        <p className="demo-muted">
+                          Следующее автосписание: 1 июня • {formatMoney(monthlyPrice)}
+                        </p>
                       </div>
                     </div>
-                  ) : null}
 
-                  {expressState === "confirmed" ? (
-                    <div className="express-live">
-                      <div className="express-timer">
-                        <span>До приезда курьера</span>
-                        <strong>{formatTimer(countdown)}</strong>
+                    <div className="demo-card">
+                      <div className="demo-card-head">
+                        <div>
+                          <p className="demo-kicker">Управление графиком</p>
+                          <h3 className="demo-card-title">Изменение дней и времени</h3>
+                        </div>
+                        <StatusPill>
+                          {scheduleEditingEnabled ? "Редактирование открыто" : "1 BYN"}
+                        </StatusPill>
                       </div>
                       <p className="demo-muted">
-                        Отмена без штрафа доступна еще {formatTimer(cancelWindow)}.
-                        После 5 минут применяется штраф {formatMoney(expressCancelPenalty)}.
+                        После оформления подписки график можно менять только после
+                        подтверждения списания 1 BYN.
                       </p>
                       <div className="action-row">
                         <button
                           className="demo-secondary-cta compact-button"
-                          onClick={handleExpressCancel}
+                          onClick={() => setScheduleChangeOpen(true)}
                           type="button"
                         >
-                          Отменить экспресс
+                          Изменить дни / время доставки
                         </button>
+                      </div>
+                    </div>
+
+                    <div className="demo-card">
+                      <div className="demo-card-head">
+                        <div>
+                          <p className="demo-kicker">Push-уведомление</p>
+                          <h3 className="demo-card-title">
+                            Завтра по графику везем {nextDeliveryBottles} бут.
+                          </h3>
+                        </div>
+                        <StatusPill>
+                          {deliveryConfirmation === "pending"
+                            ? "Ждем ответ"
+                            : deliveryConfirmation === "confirmed"
+                              ? "Подтверждено"
+                              : "Перенесено"}
+                        </StatusPill>
+                      </div>
+                      <p className="demo-muted">
+                        Это демо-версия ежедневного подтверждения в боте. Если
+                        нажать «Да», заказ уходит курьеру. Если «Нет», лимит
+                        сохраняется, а доставка переносится.
+                      </p>
+                      <div className="action-row">
                         <button
                           className="demo-main-cta compact-button"
-                          onClick={handleCourierFinish}
+                          onClick={() => setDeliveryConfirmation("confirmed")}
                           type="button"
                         >
-                          Завершить доставку (курьер)
+                          Да, подтверждаю
+                        </button>
+                        <button
+                          className="demo-secondary-cta compact-button"
+                          onClick={() => setDeliveryConfirmation("postponed")}
+                          type="button"
+                        >
+                          Нет, перенести
                         </button>
                       </div>
                     </div>
-                  ) : null}
 
-                  {expressState === "delivered" ? (
-                    <div className="express-live">
-                      <div className="express-timer success">
-                        <span>Статус доставки</span>
-                        <strong>Вода доставлена</strong>
-                      </div>
-                      <p className="demo-muted">
-                        Таймер остановлен. Клиент получил сообщение: «Вода
-                        доставлена! Спасибо, что вы с Аква60».
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {expressState === "cancelled" ? (
-                    <div className="express-live">
-                      <div className="express-timer warning">
-                        <span>Экспресс отменен</span>
-                        <strong>
-                          {penaltyApplied
-                            ? `Штраф ${formatMoney(expressCancelPenalty)}`
-                            : "Без штрафа"}
-                        </strong>
-                      </div>
-                      <p className="demo-muted">
-                        Если отказ произошел в течение 5 минут после
-                        подтверждения курьером, списывается штраф 2 рубля.
-                      </p>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="demo-card">
-                  <div className="demo-card-head">
-                    <div>
-                      <p className="demo-kicker">История оплаченных счетов</p>
-                      <h3 className="demo-card-title">Списания и услуги</h3>
-                    </div>
-                    <StatusPill>История</StatusPill>
-                  </div>
-                  <div className="history-list">
-                    {historyItems.map((item) => (
-                      <div key={item.id} className="history-row">
+                    <div className="demo-card">
+                      <div className="demo-card-head">
                         <div>
-                          <strong>{item.title}</strong>
-                          <span>{item.status}</span>
+                          <p className="demo-kicker">Дозаказать 24/7</p>
+                          <h3 className="demo-card-title">Экспресс вне лимита</h3>
                         </div>
-                        <strong>{item.amount}</strong>
+                        <StatusPill>{formatMoney(expressPrice)}</StatusPill>
                       </div>
-                    ))}
-                  </div>
-                </div>
+
+                      <div className="express-quantity-row">
+                        {[1, 2, 3].map((count) => (
+                          <button
+                            key={count}
+                            className={`day-pill${expressBottles === count ? " active" : ""}`}
+                            onClick={() => setExpressBottles(count)}
+                            type="button"
+                          >
+                            {count} бут.
+                          </button>
+                        ))}
+                      </div>
+
+                      {expressState === "idle" ? (
+                        <>
+                          <p className="demo-muted">
+                            Клиент оформляет экспресс отдельно от подписки. Таймер
+                            начнется только после подтверждения заказа курьером.
+                          </p>
+                          <button
+                            className="demo-main-cta compact-button"
+                            onClick={handleExpressRequest}
+                            type="button"
+                          >
+                            Дозаказать 24/7
+                          </button>
+                        </>
+                      ) : null}
+
+                      {expressState === "requested" ? (
+                        <div className="express-live">
+                          <div className="express-timer neutral">
+                            <span>Экспресс оформлен</span>
+                            <strong>Ждем курьера</strong>
+                          </div>
+                          <p className="demo-muted">
+                            Таймер еще не идет. Он стартует только после кнопки
+                            подтверждения у курьера.
+                          </p>
+                          <div className="action-row">
+                            <button
+                              className="demo-main-cta compact-button"
+                              onClick={handleCourierConfirm}
+                              type="button"
+                            >
+                              Курьер подтвердил заказ
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {expressState === "confirmed" ? (
+                        <div className="express-live">
+                          <div className="express-timer">
+                            <span>До приезда курьера</span>
+                            <strong>{formatTimer(countdown)}</strong>
+                          </div>
+                          <p className="demo-muted">
+                            Отмена без штрафа доступна еще {formatTimer(cancelWindow)}.
+                            После 5 минут применяется штраф {formatMoney(expressCancelPenalty)}.
+                          </p>
+                          <div className="action-row">
+                            <button
+                              className="demo-secondary-cta compact-button"
+                              onClick={handleExpressCancel}
+                              type="button"
+                            >
+                              Отменить экспресс
+                            </button>
+                            <button
+                              className="demo-main-cta compact-button"
+                              onClick={handleCourierFinish}
+                              type="button"
+                            >
+                              Завершить доставку (курьер)
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {expressState === "delivered" ? (
+                        <div className="express-live">
+                          <div className="express-timer success">
+                            <span>Статус доставки</span>
+                            <strong>Вода доставлена</strong>
+                          </div>
+                          <p className="demo-muted">
+                            Таймер остановлен. Клиент получил сообщение: «Вода
+                            доставлена! Спасибо, что вы с Аква60».
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {expressState === "cancelled" ? (
+                        <div className="express-live">
+                          <div className="express-timer warning">
+                            <span>Экспресс отменен</span>
+                            <strong>
+                              {penaltyApplied
+                                ? `Штраф ${formatMoney(expressCancelPenalty)}`
+                                : "Без штрафа"}
+                            </strong>
+                          </div>
+                          <p className="demo-muted">
+                            Если отказ произошел в течение 5 минут после
+                            подтверждения курьером, списывается штраф 2 рубля.
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="demo-card">
+                      <div className="demo-card-head">
+                        <div>
+                          <p className="demo-kicker">История оплаченных счетов</p>
+                          <h3 className="demo-card-title">Списания и услуги</h3>
+                        </div>
+                        <StatusPill>История</StatusPill>
+                      </div>
+                      <div className="history-list">
+                        {historyItems.map((item) => (
+                          <div key={item.id} className="history-row">
+                            <div>
+                              <strong>{item.title}</strong>
+                              <span>{item.status}</span>
+                            </div>
+                            <strong>{item.amount}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             ) : null}
           </div>
