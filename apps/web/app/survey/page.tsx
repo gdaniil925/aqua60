@@ -290,7 +290,23 @@ export default function SurveyPage() {
   }, [availableHouses, house]);
 
   const handleShareContact = () => {
-    setPhone("+375 (29) 555-24-60");
+    const telegramPhone = (
+      globalThis as {
+        Telegram?: {
+          WebApp?: {
+            initDataUnsafe?: {
+              user?: {
+                phone_number?: string;
+              };
+            };
+          };
+        };
+      }
+    ).Telegram?.WebApp?.initDataUnsafe?.user?.phone_number;
+
+    if (typeof telegramPhone === "string" && telegramPhone.trim()) {
+      setPhone(telegramPhone.trim());
+    }
   };
 
   const handleStreetSelect = (value: string) => {
@@ -401,16 +417,7 @@ export default function SurveyPage() {
                   <StatusPill>Минск</StatusPill>
                   <StatusPill>5л вода</StatusPill>
                 </div>
-                <div className="brand-lockup brand-lockup-hero" aria-label="Логотип Аква 60">
-                  <div className="brand-symbol" aria-hidden="true">
-                    <span className="brand-drop" />
-                    <span className="brand-leaf" />
-                  </div>
-                  <div className="brand-wordmark">
-                    <strong>Аква</strong>
-                    <span>60</span>
-                  </div>
-                </div>
+                <div className="brand-title-only brand-title-only-hero">Аква60</div>
               </div>
               <h1 className="demo-title">Подписка на воду в один экран</h1>
               <p className="demo-copy">
@@ -484,7 +491,7 @@ export default function SurveyPage() {
                           onClick={handleShareContact}
                           type="button"
                         >
-                          Подтянуть номер из Telegram
+                          Получить номер из Telegram
                         </button>
                       </div>
                     </div>
@@ -765,12 +772,7 @@ export default function SurveyPage() {
               <>
                 {!subscriptionSaved ? (
                   <div className="demo-card empty-state-card">
-                    <div className="brand-lockup brand-lockup-empty" aria-label="Логотип Аква 60">
-                      <div className="brand-symbol" aria-hidden="true">
-                        <span className="brand-drop" />
-                        <span className="brand-leaf" />
-                      </div>
-                    </div>
+                    <div className="brand-title-only brand-title-only-empty">Аква60</div>
                     <h3 className="demo-card-title">Сначала соберите подписку</h3>
                     <p className="demo-muted">
                       Здесь будет личный кабинет клиента: остаток бутылей,
@@ -795,12 +797,7 @@ export default function SurveyPage() {
                               Осталось {plan.bottles - nextDeliveryBottles} бутылей до конца месяца
                             </h3>
                           </div>
-                          <div className="brand-lockup brand-lockup-compact" aria-label="Логотип Аква 60">
-                            <div className="brand-symbol" aria-hidden="true">
-                              <span className="brand-drop" />
-                              <span className="brand-leaf" />
-                            </div>
-                          </div>
+                          <div className="brand-title-only brand-title-only-compact">Аква60</div>
                         </div>
                         <p className="demo-muted">
                           Ближайшая доставка: завтра, {selectedSlot}. Курьер привезет{" "}
@@ -810,7 +807,7 @@ export default function SurveyPage() {
 
                       <div className="demo-card">
                         <p className="demo-kicker">Оплата</p>
-                        <h3 className="demo-card-title">Карта bePaid привязана</h3>
+                        <h3 className="demo-card-title">Карта для автосписаний привязана</h3>
                         <p className="demo-muted">
                           Следующее автосписание: 1 июня • {formatMoney(monthlyPrice)}
                         </p>
@@ -894,7 +891,7 @@ export default function SurveyPage() {
                         {[1, 2, 3].map((count) => (
                           <button
                             key={count}
-                            className={`day-pill${expressBottles === count ? " active" : ""}`}
+                            className={`express-count-pill${expressBottles === count ? " active" : ""}`}
                             onClick={() => setExpressBottles(count)}
                             type="button"
                           >
