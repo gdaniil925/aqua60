@@ -401,8 +401,15 @@ export default function SurveyPage() {
                   <StatusPill>Минск</StatusPill>
                   <StatusPill>5л вода</StatusPill>
                 </div>
-                <div className="demo-brand-mark" aria-hidden="true">
-                  <span>A60</span>
+                <div className="brand-lockup brand-lockup-hero" aria-label="Логотип Аква 60">
+                  <div className="brand-symbol" aria-hidden="true">
+                    <span className="brand-drop" />
+                    <span className="brand-leaf" />
+                  </div>
+                  <div className="brand-wordmark">
+                    <strong>Аква</strong>
+                    <span>60</span>
+                  </div>
                 </div>
               </div>
               <h1 className="demo-title">Подписка на воду в один экран</h1>
@@ -758,7 +765,12 @@ export default function SurveyPage() {
               <>
                 {!subscriptionSaved ? (
                   <div className="demo-card empty-state-card">
-                    <div className="empty-state-icon">A60</div>
+                    <div className="brand-lockup brand-lockup-empty" aria-label="Логотип Аква 60">
+                      <div className="brand-symbol" aria-hidden="true">
+                        <span className="brand-drop" />
+                        <span className="brand-leaf" />
+                      </div>
+                    </div>
                     <h3 className="demo-card-title">Сначала соберите подписку</h3>
                     <p className="demo-muted">
                       Здесь будет личный кабинет клиента: остаток бутылей,
@@ -783,7 +795,12 @@ export default function SurveyPage() {
                               Осталось {plan.bottles - nextDeliveryBottles} бутылей до конца месяца
                             </h3>
                           </div>
-                          <div className="cabinet-logo">A60</div>
+                          <div className="brand-lockup brand-lockup-compact" aria-label="Логотип Аква 60">
+                            <div className="brand-symbol" aria-hidden="true">
+                              <span className="brand-drop" />
+                              <span className="brand-leaf" />
+                            </div>
+                          </div>
                         </div>
                         <p className="demo-muted">
                           Ближайшая доставка: завтра, {selectedSlot}. Курьер привезет{" "}
