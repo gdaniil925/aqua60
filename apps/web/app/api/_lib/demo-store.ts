@@ -71,6 +71,11 @@ interface DemoState {
   pricing: DemoPricing;
 }
 
+interface CustomerState {
+  client: DemoClient | null;
+  latestExpressOrder: DriverOrder | null;
+}
+
 const initialState: DemoState = {
   identities: {
     customer: [
@@ -352,11 +357,197 @@ function timestampLabel(value: string) {
   });
 }
 
+function nowDateLabel() {
+  return new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "long" });
+}
+
+function nowTimeLabel() {
+  return new Date().toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function resolveCustomerClient(state: DemoState, code: string) {
+  const customerIdentity = state.identities.customer.find((item) => item.code === code);
+  if (!customerIdentity) {
+    return state.clients[0] ?? null;
+  }
+
+  const matchedByName = state.clients.find((client) =>
+    customerIdentity.label.includes(client.name)
+  );
+
+  return matchedByName ?? state.clients[0] ?? null;
+}
+
+function computeCustomerDistrict(address: string) {
+  if (address.toLowerCase().includes("минск-мир")) {
+    return "Минск-Мир";
+  }
+
+  return "Минск";
+}
+
+function createMapPointFromGeo(lat: number, lng: number) {
+  return {
+    x: Math.round((lng - 27.48) * 1000),
+    y: Math.round((53.9 - lat) * 1000)
+  };
+}
+
 export function verifyAccess(role: RoleKey, code: string) {
   const state = getStore();
   return state.identities[role].find(
     (item) => item.code.toLowerCase() === code.trim().toLowerCase()
   );
+}
+
+export function getCustomerState(code: string): CustomerState {
+  const state = getStore();
+  const client = resolveCustomerClient(state, code);
+  const latestExpressOrder = client
+    ? [...state.orders]
+        .filter(
+          (order) =>
+            order.customerName === client.name &&
+            order.type === "express" &&
+            order.status !== "delivered"
+        )
+        .sort((left, right) => right.id.localeCompare(left.id))[0] ?? null
+    : null;
+
+  return {
+    client,
+    latestExpressOrder
+  };
+}
+
+export function saveCustomerSubscription(
+  code: string,
+  payload: {
+    phone: string;
+    address: string;
+    schedule: string;
+    monthlyBottles: number;
+    recurringAmount: number;
+  }
+) {
+  const state = getStore();
+  const client = resolveCustomerClient(state, code);
+  if (!client) {
+    return getCustomerState(code);
+  }
+
+  client.phone = payload.phone;
+  client.address = payload.address;
+  client.schedule = payload.schedule;
+  client.limit = payload.monthlyBottles;
+  client.recurringAmount = payload.recurringAmount;
+  client.nextChargeAt = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth() + 1,
+    1,
+    9,
+    0,
+    0
+  ).toISOString();
+  client.history.unshift({
+    date: nowDateLabel(),
+    event: "Подписка обновлена",
+    detail: `${payload.monthlyBottles} бутылей • ${formatCurrency(payload.recurringAmount)}`
+  });
+
+  state.payments.unshift({
+    id: `INV-${Math.floor(Date.now() / 1000)}`,
+    customerName: client.name,
+    phone: client.phone,
+    amount: payload.recurringAmount,
+    status: "paid",
+    reason: "Подписка Aqua60 • Демо-подтверждение",
+    timestamp: new Date().toISOString(),
+    recurringAt: client.nextChargeAt
+  });
+
+  return getCustomerState(code);
+}
+
+export function createCustomerExpressOrder(
+  code: string,
+  payload: {
+    bottles: number;
+    address: string;
+    district: string;
+    phone: string;
+    intercomCode: string;
+    comment: string;
+    lat: number;
+    lng: number;
+  }
+) {
+  const state = getStore();
+  const client = resolveCustomerClient(state, code);
+  if (!client) {
+    return getCustomerState(code);
+  }
+
+  client.phone = payload.phone;
+  client.address = payload.address;
+  client.history.unshift({
+    date: nowDateLabel(),
+    event: "Экспресс-заказ создан",
+    detail: `${payload.bottles} бутыли • ${payload.address}`
+  });
+
+  const nextId = `EXP-${100 + state.orders.filter((order) => order.type === "express").length + 1}`;
+  state.orders.unshift({
+    id: nextId,
+    address: payload.address,
+    district: payload.district || computeCustomerDistrict(payload.address),
+    type: "express",
+    status: "pending",
+    bottles: payload.bottles,
+    customerName: client.name,
+    customerPhone: payload.phone,
+    comment: payload.comment || "Заказ из клиентского приложения.",
+    intercomCode: payload.intercomCode || "—",
+    coords: createMapPointFromGeo(payload.lat, payload.lng),
+    geo: { lat: payload.lat, lng: payload.lng },
+    timeWindowLabel: "Сейчас",
+    minutesToDeadline: 60,
+    requestedAt: nowTimeLabel()
+  });
+
+  state.payments.unshift({
+    id: `INV-${Math.floor(Date.now() / 1000) + 1}`,
+    customerName: client.name,
+    phone: payload.phone,
+    amount: payload.bottles * (state.pricing.water + state.pricing.firstBottleService),
+    status: "pending",
+    reason: "Экспресс вне лимита",
+    timestamp: new Date().toISOString()
+  });
+
+  return getCustomerState(code);
+}
+
+export function cancelCustomerExpressOrder(code: string, orderId: string) {
+  const state = getStore();
+  const client = resolveCustomerClient(state, code);
+  const orderIndex = state.orders.findIndex(
+    (order) => order.id === orderId && order.type === "express"
+  );
+
+  if (client && orderIndex >= 0) {
+    const [removed] = state.orders.splice(orderIndex, 1);
+    client.history.unshift({
+      date: nowDateLabel(),
+      event: "Экспресс отменен",
+      detail: removed ? removed.address : "Отменен из клиента"
+    });
+  }
+
+  return getCustomerState(code);
 }
 
 export function getOwnerState() {

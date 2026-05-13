@@ -426,11 +426,41 @@ select {
   gap: 10px;
 }
 
-.real-map-frame {
+.real-map-frame-shell {
   min-height: 420px;
   border-radius: 18px;
   overflow: hidden;
   border: 1px solid var(--line);
+  background: #eef4f8;
+}
+
+.real-map-frame {
+  width: 100%;
+  height: 420px;
+  display: block;
+  border: 0;
+}
+
+.driver-map-summary {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+
+.driver-map-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.driver-map-summary-row span {
+  color: var(--text-soft);
+  text-align: right;
+  font-size: 0.92rem;
 }
 
 .leaflet-order-marker-wrapper {
@@ -831,82 +861,44 @@ select {
 .driver-theme .tab-strip,
 .driver-theme .topbar,
 .driver-theme .identity-chip,
-.driver-theme .compact-nav .nav-link {
-  background: rgba(14, 20, 31, 0.94);
-  border-color: rgba(70, 92, 128, 0.45);
-  color: #f5f8fd;
-}
-
-.driver-theme .tab-button,
-.driver-theme .section-title,
-.driver-theme .page-title,
-.driver-theme .stat-value,
-.driver-theme .identity-chip strong,
-.driver-theme .simple-item strong,
-.driver-theme .data-row,
-.driver-theme .field-label,
-.driver-theme .muted-text,
-.driver-theme .item-meta,
-.driver-theme .stat-note,
-.driver-theme .stat-label {
-  color: #f5f8fd;
-}
-
-.driver-theme .page-subtitle,
-.driver-theme .identity-chip span,
-.driver-theme .item-meta,
-.driver-theme .muted-text,
-.driver-theme .stat-note,
-.driver-theme .stat-label,
-.driver-theme .data-row.head {
-  color: #9fb4d7;
-}
-
-.driver-theme .tab-strip {
-  background: rgba(17, 25, 38, 0.95);
-}
-
-.driver-theme .tab-button.active {
-  background: #1a2940;
-  color: white;
-}
-
+.driver-theme .compact-nav .nav-link,
 .driver-theme .driver-focus-card,
 .driver-theme .order-card-button,
 .driver-theme .logic-item,
 .driver-theme .data-row,
 .driver-theme .modal-card {
-  background: rgba(19, 27, 41, 0.96);
-  border-color: rgba(70, 92, 128, 0.45);
-  color: #f5f8fd;
+  background: rgba(255, 255, 255, 0.96);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.driver-theme .tab-strip {
+  background: #eef3f7;
+}
+
+.driver-theme .tab-button.active {
+  background: white;
+  color: var(--text);
 }
 
 .driver-theme .order-card-button.active {
-  background: rgba(26, 56, 79, 0.96);
+  background: #eef8fc;
 }
 
 .driver-theme .order-card-button.express {
-  background: rgba(71, 21, 29, 0.82);
-  border-color: rgba(227, 91, 91, 0.34);
+  background: #fff4f4;
+  border-color: rgba(197, 72, 72, 0.24);
 }
 
 .driver-theme .field-input,
 .driver-theme .secondary-button {
-  background: rgba(19, 27, 41, 0.96);
-  border-color: rgba(70, 92, 128, 0.45);
-  color: #f5f8fd;
+  background: var(--surface-muted);
+  border-color: var(--line);
+  color: var(--text);
 }
 
 .driver-theme .primary-button {
-  background: #1d83a4;
-}
-
-.driver-theme .data-row.head {
-  background: rgba(26, 36, 54, 0.92);
-}
-
-.driver-theme .modal-card p {
-  color: #9fb4d7;
+  background: var(--brand);
 }
 
 .delivery-counter {

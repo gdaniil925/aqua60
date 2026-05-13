@@ -22,6 +22,7 @@ const scheduleChangeFee = 1;
 const expressCancelPenalty = 2;
 const mapZoom = 13;
 const tileSize = 256;
+const CUSTOMER_CODE = "CL-2048";
 
 const streetCatalog = [
   {
@@ -186,6 +187,8 @@ export default function SurveyPage() {
   const [countdown, setCountdown] = useState(60 * 60);
   const [cancelWindow, setCancelWindow] = useState(5 * 60);
   const [penaltyApplied, setPenaltyApplied] = useState(false);
+  const [linkedExpressOrderId, setLinkedExpressOrderId] = useState("");
+  const [isSyncingCustomer, setIsSyncingCustomer] = useState(false);
 
   const currentStreet = useMemo(
     () =>
@@ -268,6 +271,75 @@ export default function SurveyPage() {
     [monthlyPrice, paymentLinked, penaltyApplied, scheduleChangeCharged]
   );
 
+  const syncCustomerState = async () => {
+    const response = await fetch(`/api/customer?code=${CUSTOMER_CODE}`, {
+      cache: "no-store"
+    });
+    const payload = (await response.json()) as {
+      ok: boolean;
+      data?: {
+        client: {
+          phone: string;
+          address: string;
+          schedule: string;
+          limit: number;
+          recurringAmount: number;
+        } | null;
+        latestExpressOrder: {
+          id: string;
+          status: "pending" | "accepted" | "in_progress" | "delivered";
+          minutesToDeadline: number | null;
+        } | null;
+      };
+    };
+
+    if (!payload.ok || !payload.data) {
+      return;
+    }
+
+    const { client, latestExpressOrder } = payload.data;
+
+    if (client) {
+      if (!phone) {
+        setPhone(client.phone);
+      }
+
+      if (!subscriptionSaved && client.limit > 0) {
+        const matchedPlan = plans.find((item) => item.bottles === client.limit);
+        if (matchedPlan) {
+          setSelectedPlan(matchedPlan.id);
+        }
+      }
+    }
+
+    if (latestExpressOrder) {
+      setLinkedExpressOrderId(latestExpressOrder.id);
+      if (latestExpressOrder.status === "pending") {
+        setExpressState("requested");
+      } else if (
+        latestExpressOrder.status === "accepted" ||
+        latestExpressOrder.status === "in_progress"
+      ) {
+        setExpressState("confirmed");
+        if (typeof latestExpressOrder.minutesToDeadline === "number") {
+          setCountdown(latestExpressOrder.minutesToDeadline * 60);
+        }
+      } else if (latestExpressOrder.status === "delivered") {
+        setExpressState("delivered");
+        setCountdown(0);
+      }
+    } else if (linkedExpressOrderId) {
+      setLinkedExpressOrderId("");
+      if (expressState !== "delivered" && expressState !== "cancelled") {
+        setExpressState("idle");
+      }
+    }
+  };
+
+  useEffect(() => {
+    void syncCustomerState();
+  }, []);
+
   useEffect(() => {
     if (expressState !== "confirmed") {
       return;
@@ -288,6 +360,18 @@ export default function SurveyPage() {
 
     setHouse(availableHouses[0]);
   }, [availableHouses, house]);
+
+  useEffect(() => {
+    if (!subscriptionSaved && expressState === "idle") {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void syncCustomerState();
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [expressState, linkedExpressOrderId, subscriptionSaved]);
 
   const handleShareContact = () => {
     const telegramPhone = (
@@ -359,9 +443,32 @@ export default function SurveyPage() {
     setTapToPickArmed(false);
   };
 
-  const handleSubscriptionSave = () => {
+  const handleSubscriptionSave = async () => {
     if (!canSubmitSubscription) {
       return;
+    }
+
+    setIsSyncingCustomer(true);
+    try {
+      await fetch("/api/customer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          code: CUSTOMER_CODE,
+          action: "save_subscription",
+          payload: {
+            phone,
+            address: selectedAddress,
+            schedule: `${selectedDays.join(" / ")} • ${selectedSlot}`,
+            monthlyBottles: plan.bottles,
+            recurringAmount: monthlyPrice
+          }
+        })
+      });
+    } finally {
+      setIsSyncingCustomer(false);
     }
 
     setPaymentLinked(true);
@@ -370,7 +477,41 @@ export default function SurveyPage() {
     setActiveTab("delivery");
   };
 
-  const handleExpressRequest = () => {
+  const handleExpressRequest = async () => {
+    setIsSyncingCustomer(true);
+    try {
+      const response = await fetch("/api/customer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          code: CUSTOMER_CODE,
+          action: "create_express",
+          payload: {
+            bottles: expressBottles,
+            address: selectedAddress,
+            district,
+            phone,
+            intercomCode: intercom,
+            comment: "Экспресс-заказ из клиентского mini app.",
+            lat: selectedCoords.lat,
+            lng: selectedCoords.lon
+          }
+        })
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        data?: { latestExpressOrder?: { id: string } | null };
+      };
+
+      if (payload.ok && payload.data?.latestExpressOrder?.id) {
+        setLinkedExpressOrderId(payload.data.latestExpressOrder.id);
+      }
+    } finally {
+      setIsSyncingCustomer(false);
+    }
+
     setExpressState("requested");
     setPenaltyApplied(false);
     setCountdown(60 * 60);
@@ -389,11 +530,31 @@ export default function SurveyPage() {
     setCancelWindow(0);
   };
 
-  const handleExpressCancel = () => {
+  const handleExpressCancel = async () => {
+    if (linkedExpressOrderId) {
+      setIsSyncingCustomer(true);
+      try {
+        await fetch("/api/customer", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            code: CUSTOMER_CODE,
+            action: "cancel_express",
+            orderId: linkedExpressOrderId
+          })
+        });
+      } finally {
+        setIsSyncingCustomer(false);
+      }
+    }
+
     setExpressState("cancelled");
     setPenaltyApplied(cancelWindow > 0);
     setCountdown(0);
     setCancelWindow(0);
+    setLinkedExpressOrderId("");
   };
 
   const handleScheduleChangeConfirm = () => {
