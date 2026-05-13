@@ -304,6 +304,11 @@ export default function SurveyPage() {
         setPhone(client.phone);
       }
 
+      if (client.recurringAmount > 0) {
+        setPaymentLinked(true);
+        setSubscriptionSaved(true);
+      }
+
       if (!subscriptionSaved && client.limit > 0) {
         const matchedPlan = plans.find((item) => item.bottles === client.limit);
         if (matchedPlan) {
@@ -516,18 +521,6 @@ export default function SurveyPage() {
     setPenaltyApplied(false);
     setCountdown(60 * 60);
     setCancelWindow(5 * 60);
-  };
-
-  const handleCourierConfirm = () => {
-    setExpressState("confirmed");
-    setCountdown(60 * 60);
-    setCancelWindow(5 * 60);
-  };
-
-  const handleCourierFinish = () => {
-    setExpressState("delivered");
-    setCountdown(0);
-    setCancelWindow(0);
   };
 
   const handleExpressCancel = async () => {
@@ -1003,10 +996,8 @@ export default function SurveyPage() {
                     <div className="demo-card">
                       <div className="demo-card-head">
                         <div>
-                          <p className="demo-kicker">Push-уведомление</p>
-                          <h3 className="demo-card-title">
-                            Завтра по графику везем {nextDeliveryBottles} бут.
-                          </h3>
+                          <p className="demo-kicker">Ближайшая доставка</p>
+                          <h3 className="demo-card-title">{selectedDays.join(" / ")} • {selectedSlot}</h3>
                         </div>
                         <StatusPill>
                           {deliveryConfirmation === "pending"
@@ -1017,9 +1008,8 @@ export default function SurveyPage() {
                         </StatusPill>
                       </div>
                       <p className="demo-muted">
-                        Это демо-версия ежедневного подтверждения в боте. Если
-                        нажать «Да», заказ уходит курьеру. Если «Нет», лимит
-                        сохраняется, а доставка переносится.
+                        Следующая плановая доставка уже стоит в графике. Здесь клиент
+                        видит только итоговый статус подтверждения, без лишних служебных действий.
                       </p>
                       <div className="action-row">
                         <button
@@ -1064,15 +1054,16 @@ export default function SurveyPage() {
                       {expressState === "idle" ? (
                         <>
                           <p className="demo-muted">
-                            Клиент оформляет экспресс отдельно от подписки. Таймер
-                            начнется только после подтверждения заказа курьером.
+                            Клиент оформляет экспресс отдельно от подписки, а заказ сразу
+                            уходит в очередь курьера.
                           </p>
                           <button
                             className="demo-main-cta compact-button"
+                            disabled={isSyncingCustomer}
                             onClick={handleExpressRequest}
                             type="button"
                           >
-                            Дозаказать 24/7
+                            {isSyncingCustomer ? "Отправляем заказ..." : "Дозаказать 24/7"}
                           </button>
                         </>
                       ) : null}
@@ -1080,22 +1071,13 @@ export default function SurveyPage() {
                       {expressState === "requested" ? (
                         <div className="express-live">
                           <div className="express-timer neutral">
-                            <span>Экспресс оформлен</span>
-                            <strong>Ждем курьера</strong>
+                            <span>Экспресс отправлен</span>
+                            <strong>В очереди у курьера</strong>
                           </div>
                           <p className="demo-muted">
-                            Таймер еще не идет. Он стартует только после кнопки
-                            подтверждения у курьера.
+                            Как только курьер нажмет «ПРИНЯЛ» в своем кабинете,
+                            здесь автоматически запустится таймер.
                           </p>
-                          <div className="action-row">
-                            <button
-                              className="demo-main-cta compact-button"
-                              onClick={handleCourierConfirm}
-                              type="button"
-                            >
-                              Курьер подтвердил заказ
-                            </button>
-                          </div>
                         </div>
                       ) : null}
 
@@ -1106,23 +1088,18 @@ export default function SurveyPage() {
                             <strong>{formatTimer(countdown)}</strong>
                           </div>
                           <p className="demo-muted">
-                            Отмена без штрафа доступна еще {formatTimer(cancelWindow)}.
-                            После 5 минут применяется штраф {formatMoney(expressCancelPenalty)}.
+                            Курьер принял заказ, и таймер уже идет. Отмена без штрафа
+                            доступна еще {formatTimer(cancelWindow)}. После 5 минут
+                            применяется штраф {formatMoney(expressCancelPenalty)}.
                           </p>
                           <div className="action-row">
                             <button
                               className="demo-secondary-cta compact-button"
+                              disabled={isSyncingCustomer}
                               onClick={handleExpressCancel}
                               type="button"
                             >
                               Отменить экспресс
-                            </button>
-                            <button
-                              className="demo-main-cta compact-button"
-                              onClick={handleCourierFinish}
-                              type="button"
-                            >
-                              Завершить доставку (курьер)
                             </button>
                           </div>
                         </div>

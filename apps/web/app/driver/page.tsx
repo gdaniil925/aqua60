@@ -79,6 +79,14 @@ function DriverDashboard({ identity }: { identity: AccessIdentity }) {
     void loadDriverData();
   }, [identity.code]);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      void loadDriverData();
+    }, 4000);
+
+    return () => window.clearInterval(intervalId);
+  }, [identity.code]);
+
   const postDriverAction = async (body: Record<string, unknown>) => {
     setIsSaving(true);
     try {
