@@ -108,6 +108,6 @@ export function getRecommendedStop(orders: DriverOrder[], courierPoint: MapPoint
   return first ?? null;
 }
 
-export function buildNavigatorUrl(order: DriverOrder) {
-  return `https://yandex.ru/maps/?rtext=~${order.geo.lat},${order.geo.lng}&rtt=auto`;
+export function buildNavigatorUrl(courierPoint: GeoPoint, order: DriverOrder) {
+  return `https://yandex.ru/maps/?rtext=${courierPoint.lat},${courierPoint.lng}~${order.geo.lat},${order.geo.lng}&rtt=auto`;
 }

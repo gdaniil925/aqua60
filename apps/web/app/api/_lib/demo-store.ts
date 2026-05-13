@@ -491,6 +491,15 @@ export function createCustomerExpressOrder(
     return getCustomerState(code);
   }
 
+  state.orders = state.orders.filter(
+    (order) =>
+      !(
+        order.type === "express" &&
+        order.status !== "delivered" &&
+        order.customerName === client.name
+      )
+  );
+
   client.phone = payload.phone;
   client.address = payload.address;
   client.history.unshift({

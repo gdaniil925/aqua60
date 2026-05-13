@@ -57,6 +57,7 @@ function formatTimer(minutesLeft: number | null, status: DriverOrder["status"]) 
 }
 
 function DriverDashboard({ identity }: { identity: AccessIdentity }) {
+  const courierGeoPoint = { lat: 53.8695, lng: 27.5485 };
   const [tab, setTab] = useState<DriverTab>("queue");
   const [data, setData] = useState<DriverData | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState("");
@@ -180,7 +181,7 @@ function DriverDashboard({ identity }: { identity: AccessIdentity }) {
               }
             >
               <DgisMinskMap
-                courierPoint={{ lat: 53.8695, lng: 27.5485 }}
+                courierPoint={courierGeoPoint}
                 stops={activeOrders.map((stop) => stop.order)}
               />
             </SectionCard>
@@ -325,7 +326,7 @@ function DriverDashboard({ identity }: { identity: AccessIdentity }) {
                   ) : null}
                   <a
                     className="secondary-button link-button"
-                    href={buildNavigatorUrl(selectedOrder)}
+                    href={buildNavigatorUrl(courierGeoPoint, selectedOrder)}
                     rel="noreferrer"
                     target="_blank"
                   >
